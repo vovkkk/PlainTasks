@@ -221,3 +221,82 @@ class PlainTasksOpenUrlCommand(sublime_plugin.TextCommand):
             webbrowser.open_new_tab(strUrl)
         else:
             sublime.status_message("Looks like there is nothing to open")
+
+
+class PlainTasksConvertToHtml(PlainTasksBase):
+    ''' to test:
+        view.run_command('plain_tasks_convert_to_html')
+    '''
+    # TODO: treat tags
+    # TODO: create preview automatically
+    # TODO: improve template (wrap, cancelled etc.)
+    # TODO: folding?
+    def runCommand(self, edit):
+        all_lines_regions = self.view.split_by_newlines(sublime.Region(0, int(self.view.size())))
+        scopes_index = []
+        for r in all_lines_regions:
+            si = self.view.scope_name(r.a)
+            scopes_index.append(si)
+        # print("\n".join(scopes_index))
+        html_doc = []
+        patterns = {'HEADER'    : 'text.todo keyword.control.header.todo ',
+                    'EMPTY'     : 'text.todo ',
+                    'NOTE'      : 'text.todo notes.todo ',
+                    'OPEN'      : 'text.todo meta.item.todo.pending ',
+                    'DONE'      : 'text.todo meta.item.todo.completed ',
+                    'CANCELLED' : 'text.todo meta.item.todo.cancelled ',
+                    'SEPARATOR' : 'text.todo meta.punctuation.separator.todo ',
+                    'ARCHIVE'   : 'text.todo meta.punctuation.archive.todo '
+                    }
+        for i in scopes_index:
+            y = scopes_index.index(i)
+            x = all_lines_regions[y]
+            if i == patterns['HEADER']:
+                header = '<span class="header">' + self.view.substr(x) + '</span>'
+                html_doc.append(header)
+                self.replace_si(scopes_index, y)
+            elif i == patterns['EMPTY']:
+                # these are empty lines
+                text = '<span style="display: inline-block">' + self.view.substr(x) + '</span>'
+                html_doc.append(text)
+                self.replace_si(scopes_index, y)
+            elif i == patterns['NOTE']:
+                note = '<span class="note">' + self.view.substr(x) + '</span>'
+                html_doc.append(note)
+                self.replace_si(scopes_index, y)
+            elif i == patterns['OPEN']:
+                bullet = self.view.find(self.open_tasks_bullet, x.a)
+                pending = '<span class="bullet-pending">' + \
+                          self.view.substr(sublime.Region(x.a, bullet.b)) + '</span>' + \
+                          self.view.substr(sublime.Region(bullet.b, x.b))
+                html_doc.append(pending)
+                self.replace_si(scopes_index, y)
+            elif i == patterns['DONE']:
+                bullet = self.view.find(self.done_tasks_bullet, x.a)
+                completed = '<span class="done"><span class="bullet-done">' + \
+                            self.view.substr(sublime.Region(x.a, bullet.b)) + '</span>' + \
+                            self.view.substr(sublime.Region(bullet.b, x.b)) + '</span>'
+                html_doc.append(completed)
+                self.replace_si(scopes_index, y)
+            elif i == patterns['CANCELLED']:
+                bullet = self.view.find(self.canc_tasks_bullet, x.a)
+                cancelled = '<span class="cancelled"><span class="bullet-canc">' + \
+                            self.view.substr(sublime.Region(x.a, bullet.b)) + '</span>' + \
+                            self.view.substr(sublime.Region(bullet.b, x.b)) + '</span>'
+                html_doc.append(cancelled)
+                self.replace_si(scopes_index, y)
+            elif i == patterns['SEPARATOR']:
+                sep = '<span class="sep">' + self.view.substr(x) + '</span>'
+                html_doc.append(sep)
+                self.replace_si(scopes_index, y)
+            elif i == patterns['ARCHIVE']:
+                sep_archive = '<span class="sep-archive">' + self.view.substr(x) + '</span>'
+                html_doc.append(sep_archive)
+                self.replace_si(scopes_index, y)
+            else: pass
+        print("\n".join(html_doc))
+
+    def replace_si(self, scopes_index, y):
+        '''replaces founded element, since index finds only the first occurrence'''
+        scopes_index.remove(scopes_index[y])
+        scopes_index.insert(y, '')
