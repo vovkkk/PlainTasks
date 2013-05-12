@@ -254,49 +254,39 @@ class PlainTasksConvertToHtml(PlainTasksBase):
             if i == patterns['HEADER']:
                 header = '<span class="header">' + self.view.substr(x) + '</span>'
                 html_doc.append(header)
-                self.replace_si(scopes_index, y)
             elif i == patterns['EMPTY']:
                 # these are empty lines
                 text = '<span style="display: inline-block">' + self.view.substr(x) + '</span>'
                 html_doc.append(text)
-                self.replace_si(scopes_index, y)
             elif i == patterns['NOTE']:
                 note = '<span class="note">' + self.view.substr(x) + '</span>'
                 html_doc.append(note)
-                self.replace_si(scopes_index, y)
             elif i == patterns['OPEN']:
                 bullet = self.view.find(self.open_tasks_bullet, x.a)
                 pending = '<span class="bullet-pending">' + \
                           self.view.substr(sublime.Region(x.a, bullet.b)) + '</span>' + \
                           self.view.substr(sublime.Region(bullet.b, x.b))
                 html_doc.append(pending)
-                self.replace_si(scopes_index, y)
             elif i == patterns['DONE']:
                 bullet = self.view.find(self.done_tasks_bullet, x.a)
                 completed = '<span class="done"><span class="bullet-done">' + \
                             self.view.substr(sublime.Region(x.a, bullet.b)) + '</span>' + \
                             self.view.substr(sublime.Region(bullet.b, x.b)) + '</span>'
                 html_doc.append(completed)
-                self.replace_si(scopes_index, y)
             elif i == patterns['CANCELLED']:
                 bullet = self.view.find(self.canc_tasks_bullet, x.a)
                 cancelled = '<span class="cancelled"><span class="bullet-canc">' + \
                             self.view.substr(sublime.Region(x.a, bullet.b)) + '</span>' + \
                             self.view.substr(sublime.Region(bullet.b, x.b)) + '</span>'
                 html_doc.append(cancelled)
-                self.replace_si(scopes_index, y)
             elif i == patterns['SEPARATOR']:
                 sep = '<span class="sep">' + self.view.substr(x) + '</span>'
                 html_doc.append(sep)
-                self.replace_si(scopes_index, y)
             elif i == patterns['ARCHIVE']:
                 sep_archive = '<span class="sep-archive">' + self.view.substr(x) + '</span>'
                 html_doc.append(sep_archive)
-                self.replace_si(scopes_index, y)
             else: pass
+            # replaces founded element, since index finds only the first occurrence:
+            scopes_index.remove(scopes_index[y])
+            scopes_index.insert(y, '')
         print("\n".join(html_doc))
-
-    def replace_si(self, scopes_index, y):
-        '''replaces founded element, since index finds only the first occurrence'''
-        scopes_index.remove(scopes_index[y])
-        scopes_index.insert(y, '')
