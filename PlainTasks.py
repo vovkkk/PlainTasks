@@ -227,8 +227,6 @@ class PlainTasksConvertToHtml(PlainTasksBase):
     ''' to test:
         view.run_command('plain_tasks_convert_to_html')
     '''
-    # TODO: treat tags
-    # TODO: create preview automatically
     # TODO: improve template (wrap, cancelled etc.)
     # TODO: folding?
     def runCommand(self, edit):
@@ -248,6 +246,7 @@ class PlainTasksConvertToHtml(PlainTasksBase):
                     'SEPARATOR' : 'text.todo meta.punctuation.separator.todo ',
                     'ARCHIVE'   : 'text.todo meta.punctuation.archive.todo '
                     }
+        all_tags = self.view.find_all('@\S+', 0)
         for i in scopes_index:
             y = scopes_index.index(i)
             x = all_lines_regions[y]
@@ -263,10 +262,21 @@ class PlainTasksConvertToHtml(PlainTasksBase):
                 html_doc.append(note)
             elif i == patterns['OPEN']:
                 bullet = self.view.find(self.open_tasks_bullet, x.a)
+                html_tags = []
+                for tag in all_tags:
+                    # print(tag, x)
+                    if tag.intersects(x):
+                        html_tag = '<span class="tag">' + \
+                                   self.view.substr(sublime.Region(tag.a, tag.b)) + '</span>'
+                        html_tags.append(html_tag)
+                    else:
+                        html_tag = ''
                 pending = '<span class="bullet-pending">' + \
                           self.view.substr(sublime.Region(x.a, bullet.b)) + '</span>' + \
-                          self.view.substr(sublime.Region(bullet.b, x.b))
+                          re.sub(r'@\S+(\s?|\s+)', '', self.view.substr(sublime.Region(bullet.b, x.b))) + \
+                          ' '.join(html_tags)
                 html_doc.append(pending)
+                # print(html_tags)
             elif i == patterns['DONE']:
                 bullet = self.view.find(self.done_tasks_bullet, x.a)
                 completed = '<span class="done"><span class="bullet-done">' + \
@@ -286,7 +296,17 @@ class PlainTasksConvertToHtml(PlainTasksBase):
                 sep_archive = '<span class="sep-archive">' + self.view.substr(x) + '</span>'
                 html_doc.append(sep_archive)
             else: pass
-            # replaces founded element, since index finds only the first occurrence:
+            # replaces found element, since index finds only the first occurrence:
             scopes_index.remove(scopes_index[y])
             scopes_index.insert(y, '')
-        print("\n".join(html_doc))
+        # print("\n".join(html_doc))
+        # create file
+        import tempfile, os, io
+        tmp_html = tempfile.NamedTemporaryFile(delete=False, suffix='.html')
+        template = io.open(re.sub(r'PlainTasks.py', 'templates/template.html', os.path.abspath(__file__)), 'r')
+        for line in template:
+            line = line.replace('$content', '\n'.join(html_doc))
+            tmp_html.write(line.encode('utf-8'))
+        tmp_html.close()
+        webbrowser.open_new_tab("file://%s"%tmp_html.name)
+        # print(os.path.abspath(__file__))
